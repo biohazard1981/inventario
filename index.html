@@ -102,6 +102,14 @@ nav.tabs button[aria-selected=true]{background:var(--primary-soft);color:var(--p
 .sheet .panel{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px))}
 .sheet .panel .code{font-size:20px;margin-bottom:10px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.alert{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;color:#fff;
+  padding-top:calc(24px + env(safe-area-inset-top,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.alert.ok{background:#0F7B45} .alert.dup{background:#B15F00} .alert.bad{background:#B42318}
+.alert .abig{font-size:38px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.alert .acode{font-family:var(--mono);font-size:30px;font-weight:700;margin-top:16px;font-variant-numeric:tabular-nums;word-break:break-all}
+.alert .adesc{font-size:20px;font-weight:650;margin-top:10px}
+.alert .asub{font-size:16px;margin-top:6px;opacity:.95}
+.alert button{margin-top:28px;min-width:200px;min-height:56px;font:inherit;font-size:18px;font-weight:700;border-radius:14px;border:2px solid #fff;background:rgba(255,255,255,.18);color:#fff}
 .cloud{font-size:13px;color:var(--muted);margin-top:2px}
 .cloud::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted)}
 .cloud.ok{color:var(--ok)} .cloud.ok::before{background:var(--ok)}
@@ -147,9 +155,11 @@ nav.tabs button[aria-selected=true]{background:var(--primary-soft);color:var(--p
           <label class="btn" for="photo" id="photoLbl">Tomar foto</label>
           <input type="file" id="photo" accept="image/*" capture="environment" style="position:absolute;left:-9999px" tabindex="-1">
         </div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px;color:var(--muted)">
-          <input type="checkbox" id="hires"> Mayor resolución (si no lee bien códigos pequeños)
-        </label>
+        <div class="stack" style="margin-top:10px;font-size:14px;color:var(--muted)">
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="snd"> Sonido y voz en cada lectura</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cfm"> Confirmar cada lectura (espera a que toques «Siguiente»)</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="hires"> Mayor resolución (si no lee bien códigos pequeños)</label>
+        </div>
         <p class="muted" id="camMsg" role="status" style="margin-top:8px"></p>
       </div>
 
@@ -190,15 +200,29 @@ nav.tabs button[aria-selected=true]{background:var(--primary-soft);color:var(--p
         <p class="muted" id="bkMsg" role="status" style="margin-top:10px"></p>
       </div>
       <div class="card">
+        <h2>Guardar en Google Sheets</h2>
+        <p class="muted" style="margin-bottom:10px">Cada escaneo se copia solo a una hoja tuya. Si cambias de teléfono, se recupera desde ahí.</p>
+        <label class="fld" for="shUrl">Dirección de la aplicación web (termina en /exec)</label>
+        <input type="text" id="shUrl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+        <label class="fld" for="shKey" style="margin-top:8px">Clave (la misma que pusiste en el script)</label>
+        <input type="text" id="shKey" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="shSave" type="button">Conectar</button>
+          <button class="btn" id="shOff" type="button">Desconectar</button>
+        </div>
+        <p class="muted" id="shMsg" role="status" style="margin-top:8px"></p>
+      </div>
+      <div class="card">
         <h2>Base de códigos</h2>
-        <p class="muted" id="dbInfo2" style="margin-bottom:10px"></p>
+        <p class="muted" id="dbInfo2" style="margin-bottom:4px"></p>
+        <p class="muted" style="margin-bottom:10px">Versión de la app: 3 (alertas + Google Sheets)</p>
         <label class="btn" for="dbfile2" style="width:100%">Actualizar la base (elegir archivo)</label>
         <input type="file" id="dbfile2" style="position:absolute;left:-9999px" tabindex="-1">
         <p class="muted" id="dbMsg2" role="status" style="margin-top:8px"></p>
       </div>
       <div class="card">
         <h2>Borrar todo</h2>
-        <p class="muted" style="margin-bottom:10px">Elimina los escaneos guardados en este teléfono. Descarga el Excel antes.</p>
+        <p class="muted" style="margin-bottom:10px">Elimina los escaneos de este teléfono y, si Google Sheets está conectado, también los de la hoja. Descarga el Excel antes.</p>
         <button class="btn danger" id="wipe" type="button" style="width:100%">Borrar todos los registros</button>
       </div>
     </section>
@@ -210,6 +234,8 @@ nav.tabs button[aria-selected=true]{background:var(--primary-soft);color:var(--p
   <button type="button" role="tab" data-t="list" aria-selected="false" id="tabListBtn">Registros</button>
   <button type="button" role="tab" data-t="backup" aria-selected="false">Respaldo</button>
 </nav>
+
+<div class="alert" id="alert" role="alertdialog" aria-live="assertive"></div>
 
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Editar registro">
   <div class="panel" id="sheetBody"></div>
@@ -392,6 +418,107 @@ function importBase(file, msgId){
   fr.readAsText(file);
 }
 
+
+/* ---------- Google Sheets (copia automática) ---------- */
+var sUp = {}, sDel = {}, sBusy = false, sTimer = null, sheet = { state: 'off', err: '' };
+function sheetsOn(){ return !!meta.sheetsUrl; }
+function sheetsPersist(){ meta.sUp = Object.keys(sUp); meta.sDel = Object.keys(sDel); saveMeta(); }
+function sheetsPending(){ return Object.keys(sUp).length + Object.keys(sDel).length; }
+function sheetMark(code){ if (!sheetsOn()) return; sUp[code] = (sUp[code] || 0) + 1; delete sDel[code]; sheetsPersist(); scheduleSheets(); renderCloud(); }
+function sheetDelMark(code){ if (!sheetsOn()) return; delete sUp[code]; sDel[code] = (sDel[code] || 0) + 1; sheetsPersist(); scheduleSheets(); renderCloud(); }
+function scheduleSheets(d){ clearTimeout(sTimer); sTimer = setTimeout(runSheets, d == null ? 1500 : d); }
+function rowOf(r){
+  return ['', r.sede || '', r.desc || '', r.code, r.marca || '', r.modelo || '', r.serie || '', r.host || '',
+    r.found ? 'ENCONTRADO' : 'NO ENCONTRADO', fmtDate(r.ts), fmtTime(r.ts), r.sedeEsc || '', r.obs || '', r.src || ''];
+}
+function sheetsPost(body){
+  body.clave = meta.sheetsKey || '';
+  var url = meta.sheetsUrl, payload = JSON.stringify(body);
+  return fetch(url, { method: 'POST', body: payload, redirect: 'follow' }).then(function(r){ return r.json(); }).then(function(j){
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta');
+    return j;
+  }).catch(function(e){
+    if (!(e instanceof TypeError)) throw e;
+    // algunos navegadores bloquean leer la respuesta: se envía igual, sin confirmación
+    return fetch(url, { method: 'POST', body: payload, mode: 'no-cors' }).then(function(){ return { ok: true, opaque: true }; });
+  });
+}
+function sheetsGet(action){
+  var url = meta.sheetsUrl + (meta.sheetsUrl.indexOf('?') >= 0 ? '&' : '?') + 'action=' + action + '&clave=' + encodeURIComponent(meta.sheetsKey || '');
+  return fetch(url, { redirect: 'follow' }).then(function(r){ return r.json(); }).then(function(j){
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta');
+    return j;
+  });
+}
+function runSheets(){
+  if (sBusy || !sheetsOn()) return Promise.resolve();
+  Object.keys(sUp).forEach(function(c){ if (!scans.has(c)) delete sUp[c]; });
+  var up = Object.keys(sUp).slice(0, 40), del = Object.keys(sDel).slice(0, 100);
+  if (!up.length && !del.length && !meta.sheetWipe) { sheet.state = 'ok'; renderCloud(); return Promise.resolve(); }
+  sBusy = true; sheet.state = 'sync'; renderCloud();
+  var vU = {}, vD = {}; up.forEach(function(c){ vU[c] = sUp[c]; }); del.forEach(function(c){ vD[c] = sDel[c]; });
+  var body = { rows: up.map(function(c){ return rowOf(scans.get(c)); }), deletes: del, wipe: !!meta.sheetWipe };
+  return sheetsPost(body).then(function(){
+    up.forEach(function(c){ if (sUp[c] === vU[c]) delete sUp[c]; });
+    del.forEach(function(c){ if (sDel[c] === vD[c]) delete sDel[c]; });
+    if (body.wipe) meta.sheetWipe = false;
+    sheetsPersist(); sBusy = false; sheet.state = 'ok'; renderCloud();
+    if (sheetsPending()) scheduleSheets(300);
+  }).catch(function(e){
+    sBusy = false; sheet.state = 'err'; sheet.err = String((e && e.message) || e).slice(0, 80); renderCloud();
+    scheduleSheets(sheet.err === 'clave' ? 60000 : 15000);
+  });
+}
+function restoreFromSheet(){
+  if (!sheetsOn() || meta.sheetWipe) return Promise.resolve(0);
+  return sheetsGet('list').then(function(j){
+    var n = 0;
+    (j.rows || []).forEach(function(r){
+      var code = String(r[3] || '').trim();
+      if (!code || scans.has(code) || sDel[code]) return;
+      var ts = Date.parse(String(r[9] || '') + 'T' + String(r[10] || ''));
+      var rec = { code: code, ts: isNaN(ts) ? Date.now() : ts, found: r[8] === 'ENCONTRADO', sede: r[1] || '', desc: r[2] || '',
+        marca: r[4] || '', modelo: r[5] || '', serie: r[6] || '', host: r[7] || '', src: r[13] || '', sedeEsc: r[11] || '', obs: r[12] || '', upd: Date.now() };
+      rec.ch = nextCh(); idxAdd(rec); scans.set(code, rec); saveScan(rec); n++;
+    });
+    return n;
+  });
+}
+function initSheets(){
+  sUp = {}; sDel = {};
+  (meta.sUp || []).forEach(function(c){ sUp[c] = 1; }); (meta.sDel || []).forEach(function(c){ sDel[c] = 1; });
+  if (!sheetsOn()) return;
+  sheet.state = 'sync'; renderCloud();
+  runSheets().then(function(){
+    return restoreFromSheet().then(function(n){ if (n) refreshAll(); });
+  }).catch(function(e){ sheet.state = 'err'; sheet.err = String((e && e.message) || e).slice(0, 80); renderCloud(); scheduleSheets(15000); });
+}
+function shMsg(t){ $('shMsg').textContent = t || ''; }
+function connectSheets(){
+  var url = $('shUrl').value.trim(), key = $('shKey').value.trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(url)) { shMsg('La dirección debe empezar con https://script.google.com/macros/s/ y terminar en /exec.'); return; }
+  if (!key) { shMsg('Escribe la clave que pusiste en el script.'); return; }
+  var prev = { u: meta.sheetsUrl, k: meta.sheetsKey };
+  meta.sheetsUrl = url; meta.sheetsKey = key; shMsg('Probando la conexión…');
+  sheetsGet('ping').then(function(){
+    saveMeta();
+    scans.forEach(function(r){ sUp[r.code] = (sUp[r.code] || 0) + 1; });
+    sheetsPersist();
+    shMsg('Conectado. Enviando lo que ya tienes y revisando la hoja…');
+    return restoreFromSheet().then(function(n){ refreshAll(); scheduleSheets(200); shMsg('Conectado ✓' + (n ? ' · se recuperaron ' + nf(n) + ' registros de la hoja.' : '')); });
+  }).catch(function(e){
+    meta.sheetsUrl = prev.u; meta.sheetsKey = prev.k;
+    var m = String((e && e.message) || e);
+    shMsg(m === 'clave' ? 'La clave no coincide con la del script.' :
+      m === 'respuesta' || /JSON|Unexpected/i.test(m) ? 'Google no devolvió la respuesta esperada. Revisa que la implementación diga «Cualquier persona» y que copiaste la dirección que termina en /exec.' :
+      'No se pudo conectar. Revisa la dirección y tu conexión a internet.');
+  });
+}
+function disconnectSheets(){
+  meta.sheetsUrl = ''; meta.sheetsKey = ''; meta.sheetWipe = false; sUp = {}; sDel = {}; sheetsPersist();
+  $('shUrl').value = ''; $('shKey').value = ''; shMsg('Desconectado. Lo ya enviado se queda en la hoja.'); renderCloud();
+}
+
 /* ---------- Nube (copia automática) ---------- */
 var CH_SIZE = 150, chCount = {}, chSeq = 0, metaSent = '', metaTimer = null, metaBusy = false;
 var dirty = {}, syncing = false, syncTimer = null, initTimer = null;
@@ -432,7 +559,14 @@ function prepareChunks(){
 }
 function renderCloud(){
   var n = dirtyList().length, t, cls = '';
-  if (cloud.state === 'off') { t = 'Se guarda en este teléfono. Descarga el Excel al terminar cada jornada.'; cls = 'ok'; }
+  if (sheetsOn()) {
+    var sp = sheetsPending();
+    if (sheet.state === 'err' && sheet.err === 'clave') { t = 'La clave de Google Sheets no coincide. Revísala en «Respaldo».'; cls = 'bad'; }
+    else if (sheet.state === 'err') { t = 'Sin conexión con Google Sheets (' + nf(sp) + ' pendientes). Se reintenta solo; todo sigue guardado en el teléfono.'; cls = 'warn'; }
+    else if (sheet.state === 'sync' || sp) { t = 'Enviando a Google Sheets…'; cls = 'warn'; }
+    else { t = 'Todo guardado en Google Sheets'; cls = 'ok'; }
+  }
+  else if (cloud.state === 'off') { t = 'Se guarda en este teléfono. Descarga el Excel al terminar cada jornada.'; cls = 'ok'; }
   else if (cloud.state === 'init') { t = 'Conectando con la nube…'; }
   else if (cloud.state === 'err') { t = cloud.err === 'quota_exceeded' ? 'La nube está llena. Descarga el Excel y borra registros.' : 'Sin conexión a la nube. Se reintenta solo; todo sigue guardado en el teléfono.'; cls = 'warn'; }
   else if (n) { t = 'Guardando en la nube…'; cls = 'warn'; }
@@ -534,8 +668,9 @@ function initCloud(){
   });
 }
 function wipeAll(){
-  scans.clear(); chCount = {}; chSeq = 0; dirty = {}; meta.dirty = []; meta.wipePending = true; saveMeta();
+  scans.clear(); chCount = {}; chSeq = 0; dirty = {}; meta.dirty = []; meta.wipePending = true; sUp = {}; sDel = {}; if (sheetsOn()) meta.sheetWipe = true; sheetsPersist();
   return wipeStore().then(function(){
+    scheduleSheets(200);
     if (!cloud.db) return;
     return wipeCloud().then(function(){ meta.wipePending = false; saveMeta(); });
   });
@@ -548,8 +683,20 @@ function ensureAudio(){
     if (!actx) { var C = window.AudioContext || window.webkitAudioContext; if (C) actx = new C(); }
     if (actx && actx.state === 'suspended') actx.resume();
   } catch(e){}
+  try { if (window.speechSynthesis && !spOk) { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); spOk = true; } } catch(e){}
+}
+var spOk = false;
+function speak(kind){
+  if (meta.sound === false) return;
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance({ ok: 'Encontrado', dup: 'Repetido', bad: 'No encontrado' }[kind]);
+    u.lang = 'es-ES'; u.rate = 1.1; speechSynthesis.speak(u);
+  } catch(e){}
 }
 function beep(kind){
+  if (meta.sound === false) return;
   try {
     if (!actx) return;
     var seq = kind === 'ok' ? [[880, .09]] : kind === 'dup' ? [[520, .08], [520, .08]] : [[200, .3]];
@@ -561,6 +708,31 @@ function beep(kind){
     });
   } catch(e){}
   try { if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 40 : [60, 40, 60]); } catch(e){}
+}
+
+
+/* ---------- Alerta de pantalla completa ---------- */
+var alertOpen = false, alertTimer = null;
+function hideAlert(){
+  clearTimeout(alertTimer); alertOpen = false; $('alert').style.display = 'none';
+  lastAt = Date.now() + 1000; // evita releer enseguida el mismo código
+}
+function showAlert(kind, rec){
+  var a = $('alert');
+  a.className = 'alert ' + kind;
+  a.replaceChildren(
+    h('div', { class: 'abig' }, kind === 'ok' ? '✓ ENCONTRADO' : kind === 'dup' ? '⚠ REPETIDO' : '✕ NO ENCONTRADO'),
+    h('div', { class: 'acode' }, rec.code),
+    rec.desc ? h('div', { class: 'adesc' }, rec.desc) : null,
+    (rec.marca || rec.modelo) ? h('div', { class: 'asub' }, [rec.marca, rec.modelo].filter(Boolean).join(' · ')) : null,
+    rec.serie ? h('div', { class: 'asub' }, 'Serie ' + rec.serie) : null,
+    kind === 'dup' ? h('div', { class: 'asub' }, 'Ya se escaneó a las ' + fmtHM(rec.ts)) : null,
+    kind === 'bad' ? h('div', { class: 'asub' }, 'No figura en las bases. Quedó registrado como no encontrado.') : null,
+    h('button', { type: 'button', onclick: hideAlert }, kind === 'ok' ? 'Siguiente' : 'Entendido')
+  );
+  a.style.display = 'flex'; alertOpen = true; clearTimeout(alertTimer);
+  speak(kind);
+  if (kind === 'ok' && !meta.confirmEach) alertTimer = setTimeout(hideAlert, 1300);
 }
 
 /* ---------- Registro de códigos ---------- */
@@ -585,13 +757,14 @@ function resolveCode(raw){
 }
 
 function onCode(raw, via){
+  if (alertOpen && via === 'cam') return;
   var r = resolveCode(raw);
   if (!r) return;
   var now = Date.now();
   if (via === 'cam' && r.code === lastCode && now - lastAt < 2500) return;
   lastCode = r.code; lastAt = now;
   var ex = scans.get(r.code);
-  if (ex) { showResult('dup', ex); beep('dup'); return; }
+  if (ex) { showResult('dup', ex); beep('dup'); showAlert('dup', ex); return; }
   var hit = r.hit;
   var rec = {
     code: r.code, ts: now, found: !!hit,
@@ -601,10 +774,11 @@ function onCode(raw, via){
   };
   rec.ch = nextCh(); idxAdd(rec);
   scans.set(rec.code, rec);
-  saveScan(rec); markDirty(rec.ch);
+  saveScan(rec); markDirty(rec.ch); sheetMark(rec.code);
   lastScanned = rec.code;
   showResult(hit ? 'ok' : 'bad', rec);
   beep(hit ? 'ok' : 'bad');
+  showAlert(hit ? 'ok' : 'bad', rec);
   renderStats(); renderBanner();
   if ($('tab-list').classList.contains('on')) renderList(true);
 }
@@ -631,7 +805,7 @@ function showResult(kind, rec){
 }
 function undoLast(code){
   var rec = scans.get(code); if (!rec) return;
-  scans.delete(code); deleteScan(code); idxRemove(rec); markDirty(rec.ch);
+  scans.delete(code); deleteScan(code); idxRemove(rec); markDirty(rec.ch); sheetDelMark(code);
   lastCode = ''; $('result').replaceChildren();
   renderStats(); renderBanner();
   if ($('tab-list').classList.contains('on')) renderList(true);
@@ -719,13 +893,13 @@ function openEditor(code){
   var armed = false;
   del.addEventListener('click', function(){
     if (!armed) { armed = true; del.classList.add('armed'); del.textContent = 'Toca otra vez para eliminar'; setTimeout(function(){ armed = false; del.classList.remove('armed'); del.textContent = 'Eliminar registro'; }, 4000); return; }
-    scans.delete(code); deleteScan(code); idxRemove(rec); markDirty(rec.ch); closeSheet(); renderStats(); renderList(true); renderBanner();
+    scans.delete(code); deleteScan(code); idxRemove(rec); markDirty(rec.ch); sheetDelMark(code); closeSheet(); renderStats(); renderList(true); renderBanner();
     if (lastScanned === code) $('result').replaceChildren();
   });
   body.append(h('div', { class: 'row', style: 'margin-top:12px' },
     h('button', { class: 'btn primary', type: 'button', onclick: function(){
       FIELDS.forEach(function(f){ rec[f[0]] = inputs[f[0]].value.trim(); });
-      rec.upd = Date.now(); saveScan(rec); markDirty(rec.ch); closeSheet(); renderList(true);
+      rec.upd = Date.now(); saveScan(rec); markDirty(rec.ch); sheetMark(code); closeSheet(); renderList(true);
       if (lastScanned === code) showResult(rec.found ? 'ok' : 'bad', rec);
     } }, 'Guardar cambios'),
     h('button', { class: 'btn', type: 'button', onclick: closeSheet }, 'Cerrar')
@@ -844,6 +1018,10 @@ function bind(){
     meta.hires = e.target.checked; saveMeta();
     if (running) stopCam().then(startCam);
   });
+  $('snd').addEventListener('change', function(e){ meta.sound = e.target.checked; saveMeta(); if (e.target.checked) ensureAudio(); });
+  $('cfm').addEventListener('change', function(e){ meta.confirmEach = e.target.checked; saveMeta(); });
+  $('shSave').addEventListener('click', connectSheets);
+  $('shOff').addEventListener('click', disconnectSheets);
   $('photo').addEventListener('change', function(e){
     var f = e.target.files && e.target.files[0]; if (!f) return;
     ensureAudio();
@@ -896,11 +1074,14 @@ function start(){
   initStore().then(loadBase).then(function(){
     prepareChunks();
     $('sedeEsc').value = meta.sedeEsc || ''; $('hires').checked = !!meta.hires;
+    $('snd').checked = meta.sound !== false; $('cfm').checked = !!meta.confirmEach;
+    $('shUrl').value = meta.sheetsUrl || ''; $('shKey').value = meta.sheetsKey || '';
     renderStats(); renderBanner(); renderBackup();
     if (scans.size) {
       var last = Array.from(scans.values()).sort(function(a, b){ return b.ts - a.ts; })[0];
       $('result').replaceChildren(h('div', { class: 'empty' }, 'Tienes ' + nf(scans.size) + ' escaneos guardados. El último fue ' + last.code + ' a las ' + fmtHM(last.ts) + '.'));
     }
+    initSheets();
     return initCloud();
   });
   renderStats();
